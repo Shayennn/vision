@@ -1,15 +1,15 @@
 '''Main file
 '''
 
-from gate import gate
+from gate import Gate
 
 
 def run():
     '''Main function
     '''
 
-    gateObj = gate('test.mp4')
-    gateObj.read()
+    gate_obj = Gate('test.mp4')
+    gate_obj.read()
 
 
 if __name__ == "__main__":
