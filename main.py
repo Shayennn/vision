@@ -4,7 +4,7 @@
 from gate import Gate
 
 
-def run(name='test.mp4'):
+def run(name='test.avi'):
     '''Main function
     '''
 
