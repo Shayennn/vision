@@ -1,5 +1,3 @@
-'''TODO: Write testing script with multithread to open multi example file.
-'''
 import subprocess
 import threading
 
@@ -16,7 +14,7 @@ class MultiTest(threading.Thread):
         self.filename = filename
 
     def run(self):
-        subprocess.run(['python main.py ' + self.filename],
+        subprocess.run(['python3 main.py ' + self.filename],
                        shell=True, check=True)
 
 
