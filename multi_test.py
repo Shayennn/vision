@@ -14,7 +14,7 @@ class MultiTest(threading.Thread):
         self.filename = filename
 
     def run(self):
-        subprocess.run(['python3 main.py ' + self.filename],
+        subprocess.run(['python2 main.py ' + self.filename],
                        shell=True, check=True)
 
 
