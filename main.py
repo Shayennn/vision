@@ -1,13 +1,9 @@
-'''Main file
-'''
+#! /usr/bin/python2
 
 from gate import Gate
 
 
 def run(name='test.avi'):
-    '''Main function
-    '''
-
     gate_obj = Gate(name)
     gate_obj.read()
 
