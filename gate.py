@@ -2,7 +2,7 @@ from __future__ import division
 import cv2
 import numpy as np
 import time
-from gate_ifelse_lib import GateCheck
+from gate_ml_lib import GateML
 
 
 class Gate:
@@ -13,7 +13,7 @@ class Gate:
     '''
 
     def __init__(self, fileToOpen=None):
-        self.GateCond = GateCheck()
+        self.ML = GateML()
         if fileToOpen is not None:
             self.device = cv2.VideoCapture(fileToOpen)
         else:
@@ -30,7 +30,7 @@ class Gate:
             if not retval:
                 break
             self.doProcess(image, True)
-            key = cv2.waitKey(50)
+            key = cv2.waitKey(1)
             if key == ord('q'):
                 break
 
@@ -48,12 +48,12 @@ class Gate:
         """
         img = cv2.resize(img, None, fx=0.25, fy=0.25)
         processed = self._process(img)
-        if showImg:
-            # cv2.imshow(str(self.filename)+' ct', processed[1])
-            # cv2.imshow(str(self.filename)+' 2', processed[2])
-            # cv2.imshow(str(self.filename)+' 3', processed[3])
-            cv2.imshow(str(self.filename)+' 4', processed[4])
-            cv2.imshow(str(self.filename)+' 5', processed[5])
+        # if showImg:
+        #     # cv2.imshow(str(self.filename)+' ct', processed[1])
+        #     # cv2.imshow(str(self.filename)+' 2', processed[2])
+        #     # cv2.imshow(str(self.filename)+' 3', processed[3])
+        #     # cv2.imshow(str(self.filename)+' 4', processed[4])
+        #     cv2.imshow(str(self.filename)+' 5', processed[5])
         if processed[6] is not None:
             diff = self.calcDiffPercent(processed[6], self.last_detect)
             cond = self.last_detect is None or diff[0] < 0.2
@@ -81,27 +81,22 @@ class Gate:
             closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cts = sorted(cts, key=my_area, reverse=True)
         self.temp_img = img
-        self.SendDataToML(cts, gray)
+        filtered = self.FindGateFromGates(cts, gray)
         found = None
         withct = img.copy()
-        for c in cts:
+        for c in filtered:
             x, y, w, h = cv2.boundingRect(c)
             c_area = cv2.contourArea(c)
-            if (c_area/w/h > 0.4) or w*h/gray.size < 0.02:
-                continue
-            else:
-                # withct = cv2.drawContours(withct, [c], 0, (0, 255, 255), 3)
-                found = ((2*x+w)/img.shape[1]-1, (2*y+h)/img.shape[0] - 1,
-                         2*x/img.shape[1]-1, 2*(x+w)/img.shape[1]-1,
-                         c_area/w/h)
-                diff = self.calcDiffPercent(found, self.last_detect)
-                cond = self.last_detect is None or diff[0] < 0.5
-                if cond:
-                    cv2.rectangle(withct, (x, y), (x+w, y+h), (255, 255, 0), 3)
-                    cv2.circle(withct, (int(x+w/2), int(y+h/2)),
-                               4, (0, 255, 255), 4)
-                    break
-
+            found = ((2*x+w)/img.shape[1]-1, (2*y+h)/img.shape[0] - 1,
+                     2*x/img.shape[1]-1, 2*(x+w)/img.shape[1]-1,
+                     c_area/w/h)
+            diff = self.calcDiffPercent(found, self.last_detect)
+            cond = self.last_detect is None or diff[0] < 0.2
+            if cond:
+                cv2.rectangle(withct, (x, y), (x+w, y+h), (255, 255, 0), 3)
+                cv2.circle(withct, (int(x+w/2), int(y+h/2)),
+                           4, (0, 255, 255), 4)
+                break
         return (img, noise_removed, th1, bw_th3, closing, withct, found)
 
     def calcDiffPercent(self, first, second):
@@ -113,36 +108,45 @@ class Gate:
         return tuple(res)
 
     def prepareData(self, gray):
-        data_t = cv2.resize(gray, (20, 20))
+        data_t = cv2.resize(gray, (100, 50))
         return data_t
 
-    def SendDataToML(self, cts, gray):
+    def FindGateFromGates(self, cts, gray):
         # eqlst = cv2.equalizeHist(gray)
         opt = self.temp_img.copy()
         if len(cts) > 10:
             cts = cts[:10]
+        outputs = []
         for i, ct in enumerate(cts):
             x, y, w, h = cv2.boundingRect(ct)
-            # mini = gray[y:y+h, x:x+w]
-            # prepared = self.prepareData(mini)
-            if self.GateCond.predict(ct, gray.size) == 1:
+            only_ct = np.zeros_like(gray, 'uint8')
+            cv2.fillPoly(only_ct, pts=[ct], color=255)
+            mini = only_ct[y:y+h, x:x+w]
+            prepared = self.prepareData(mini)
+            color = (255, 0, 255)
+            if self.ML.predict(prepared) == 1:
                 color = (0, 255, 0)
+                outputs.append(ct)
             else:
                 color = (255, 0, 255)
+            prop = self.ML.getprop([prepared])[0][1]
             cv2.rectangle(opt, (x, y), (x+w, y+h), color, 2)
-            cv2.putText(opt, str(i), (int(x+w/2), int(y+h/2)),
+            cv2.putText(opt, str(i)+': %.4f' % prop, (int(x+w/5), int(y+h/2)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
             # cv2.imshow(str(i)+' mini', prepared)
         cv2.imshow('ML', opt)
         # key = cv2.waitKey(0)
         # for i, ct in enumerate(cts):
         #     x, y, w, h = cv2.boundingRect(ct)
-        #     mini = gray[y:y+h, x:x+w]
+        #     only_ct = np.zeros_like(gray, 'uint8')
+        #     cv2.fillPoly(only_ct, pts=[ct], color=255)
+        #     mini = only_ct[y:y+h, x:x+w]
         #     prepared = self.prepareData(mini)
         #     if chr(key) == str(i):
         #         self.thisIsGate(prepared)
         #     else:
         #         self.thisIsNotGate(prepared)
+        return outputs
 
     def thisIsGate(self, img):
         cv2.imwrite('training/gate/' +

@@ -3,10 +3,10 @@
 from gate import Gate
 
 
-def run(name='test.avi'):
+def run(name='test4.avi'):
     gate_obj = Gate(name)
     gate_obj.read()
-
+    
 
 if __name__ == "__main__":
     import sys
