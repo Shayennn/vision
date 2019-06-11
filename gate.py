@@ -48,12 +48,12 @@ class Gate:
         """
         img = cv2.resize(img, None, fx=0.25, fy=0.25)
         processed = self._process(img)
-        if showImg:
-            # cv2.imshow(str(self.filename)+' ct', processed[1])
-            # cv2.imshow(str(self.filename)+' 2', processed[2])
-            # cv2.imshow(str(self.filename)+' 3', processed[3])
-            cv2.imshow(str(self.filename)+' 4', processed[4])
-            cv2.imshow(str(self.filename)+' 5', processed[5])
+        # if showImg:
+        #     # cv2.imshow(str(self.filename)+' ct', processed[1])
+        #     # cv2.imshow(str(self.filename)+' 2', processed[2])
+        #     # cv2.imshow(str(self.filename)+' 3', processed[3])
+        #     cv2.imshow(str(self.filename)+' 4', processed[4])
+        #     cv2.imshow(str(self.filename)+' 5', processed[5])
         if processed[6] is not None:
             diff = self.calcDiffPercent(processed[6], self.last_detect)
             cond = self.last_detect is None or diff[0] < 0.2
@@ -77,7 +77,7 @@ class Gate:
         bw_th3 = cv2.bitwise_and(th1, th3)
         kernel = np.ones((blur_k, blur_k), np.uint8)
         closing = cv2.morphologyEx(bw_th3, cv2.MORPH_CLOSE, kernel)
-        _, cts, hi = cv2.findContours(
+        cts, hi = cv2.findContours(
             closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cts = sorted(cts, key=my_area, reverse=True)
         self.temp_img = img
@@ -121,6 +121,7 @@ class Gate:
         opt = self.temp_img.copy()
         if len(cts) > 10:
             cts = cts[:10]
+        cv2.drawContours(opt, cts, -1, (0, 255, 255), 2)
         for i, ct in enumerate(cts):
             x, y, w, h = cv2.boundingRect(ct)
             # mini = gray[y:y+h, x:x+w]

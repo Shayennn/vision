@@ -24,7 +24,7 @@ if __name__ == "__main__":
     TEST_FILES_DIR = 'test_file'
     THREADS = []
     for fn in os.listdir(TEST_FILES_DIR):
-        if fn.split('.')[-1] != 'avi':
+        if fn.split('.')[-1] != 'mp4':
             continue
         THREADS.append(MultiTest(os.path.join(TEST_FILES_DIR, fn)))
     for thrd in THREADS:
