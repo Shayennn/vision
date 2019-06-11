@@ -52,7 +52,7 @@ class Gate:
         #     # cv2.imshow(str(self.filename)+' ct', processed[1])
         #     # cv2.imshow(str(self.filename)+' 2', processed[2])
         #     # cv2.imshow(str(self.filename)+' 3', processed[3])
-        #     # cv2.imshow(str(self.filename)+' 4', processed[4])
+        #     cv2.imshow(str(self.filename)+' 4', processed[4])
         #     cv2.imshow(str(self.filename)+' 5', processed[5])
         if processed[6] is not None:
             diff = self.calcDiffPercent(processed[6], self.last_detect)
@@ -77,7 +77,7 @@ class Gate:
         bw_th3 = cv2.bitwise_and(th1, th3)
         kernel = np.ones((blur_k, blur_k), np.uint8)
         closing = cv2.morphologyEx(bw_th3, cv2.MORPH_CLOSE, kernel)
-        _, cts, hi = cv2.findContours(
+        cts, hi = cv2.findContours(
             closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cts = sorted(cts, key=my_area, reverse=True)
         self.temp_img = img
@@ -117,6 +117,7 @@ class Gate:
         if len(cts) > 10:
             cts = cts[:10]
         outputs = []
+        cv2.drawContours(opt, cts, -1, (0, 255, 255), 2)
         for i, ct in enumerate(cts):
             x, y, w, h = cv2.boundingRect(ct)
             only_ct = np.zeros_like(gray, 'uint8')
