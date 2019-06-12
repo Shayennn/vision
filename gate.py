@@ -72,7 +72,8 @@ class Gate:
         noise_removed = cv2.medianBlur(gray, blur_k)
         ret, th1 = cv2.threshold(
             noise_removed, 127*0.9, 255, cv2.THRESH_BINARY_INV)
-        th3 = cv2.adaptiveThreshold(noise_removed, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        th3 = cv2.adaptiveThreshold(noise_removed, 255,
+                                    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                     cv2.THRESH_BINARY_INV, blur_k*4+1, 2)
         bw_th3 = cv2.bitwise_and(th1, th3)
         kernel = np.ones((blur_k, blur_k), np.uint8)
