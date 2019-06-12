@@ -108,7 +108,7 @@ class Gate:
         return tuple(res)
 
     def prepareData(self, gray):
-        data_t = cv2.resize(gray, (100, 50))
+        data_t = cv2.resize(gray, (40, 20))
         return data_t
 
     def FindGateFromGates(self, cts, gray):

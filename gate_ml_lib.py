@@ -19,7 +19,7 @@ class GateML:
             histed = cv2.equalizeHist(img)
             x.append(histed)
         x = np.array(x)
-        x = x.reshape(x.shape[0], 50, 100, 1)
+        x = x.reshape(x.shape[0], 20, 40, 1)
         return self.model.predict_classes(x)
 
     def getprop(self, imgs):
@@ -28,5 +28,5 @@ class GateML:
             histed = cv2.equalizeHist(img)
             x.append(histed)
         x = np.array(x)
-        x = x.reshape(x.shape[0], 50, 100, 1)
+        x = x.reshape(x.shape[0], 20, 40, 1)
         return self.model.predict(x)

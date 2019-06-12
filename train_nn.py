@@ -13,7 +13,7 @@ import numpy as np
 batch_size = 128
 num_classes = 2
 epochs = 16
-img_rows, img_cols = 50, 100
+img_rows, img_cols = 20, 40
 
 x = []
 y = []
@@ -21,15 +21,17 @@ y = []
 for f in os.listdir('training/gate'):
     if f[-4:] == '.png':
         img = cv2.imread('training/gate/'+f, cv2.IMREAD_GRAYSCALE)
-        histed = cv2.equalizeHist(img)
-        x.append(histed)
+        # histed = cv2.equalizeHist(img)
+        img = cv2.resize(img, (40, 20))
+        x.append(img)
         y.append(1)
 
 for f in os.listdir('training/other'):
     if f[-4:] == '.png':
         img = cv2.imread('training/other/'+f, cv2.IMREAD_GRAYSCALE)
-        histed = cv2.equalizeHist(img)
-        x.append(histed)
+        # histed = cv2.equalizeHist(img)
+        img = cv2.resize(img, (40, 20))
+        x.append(img)
         y.append(0)
 
 zipped = zip(x, y)
@@ -72,7 +74,7 @@ model.add(Conv2D(32, kernel_size=(3, 3),
                  input_shape=input_shape))
 model.add(Conv2D(64, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
+model.add(Dropout(0.5))
 model.add(Flatten())
 model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
