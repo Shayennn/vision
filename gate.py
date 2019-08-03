@@ -16,16 +16,16 @@ class Gate:
     useml = False
     useif = True
     # USA Param
-    # mode = 'gray'
-    # thresh = [75, 256]
-    # tileGridSize = 13
+    mode = 'gray'
+    thresh = [75, 256]
+    tileGridSize = 13
     # TH Param
-    mode = 'hsv_v'
-    thresh = [20, 256]
-    tileGridSize = 1
-    knClose = 20
+    # mode = 'hsv_v'
+    # thresh = [25, 256]
+    # tileGridSize = 33
+    knClose = 25
 
-    clipLimit = 256
+    clipLimit = 4
 
     def __init__(self, fileToOpen=None):
         self.GateML = GateML()
@@ -74,14 +74,18 @@ class Gate:
                            self.thresh[1], 256, self.adjustTh2)
         cv2.createTrackbar('kernel', str(self.filename)+' 4',
                            self.knClose, 256, self.adjustKernel)
+        read = True
         while self.device.isOpened():
-            retval, image = self.device.read()
+            if read:
+                retval, image = self.device.read()
             if not retval:
                 break
             self.doProcess(image, True)
             key = cv2.waitKey(1)
             if key == ord('q'):
                 break
+            if key == ord('s'):
+                read = not read
 
     def doProcess(self, img, showImg=False):
         """Put image then get outputs
@@ -126,7 +130,9 @@ class Gate:
         blur_k += (blur_k+1) % 2
         noise_removed = cv2.medianBlur(gray, blur_k)
         ret, th1 = cv2.threshold(
-            noise_removed, self.thresh[0], 256,
+            noise_removed, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+        ret, th1 = cv2.threshold(
+            noise_removed, ret*0.35, 256,
             cv2.THRESH_BINARY_INV)
         # th1 = cv2.adaptiveThreshold(noise_removed,
         #                             256, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
