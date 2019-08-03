@@ -17,9 +17,9 @@ class Gate:
         else:
             self.device = None
         self.filename = fileToOpen
-        self.clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(13, 13))
-        self.okrange = 67
-        self.okval = 163
+        self.clahe = cv2.createCLAHE(clipLimit=256, tileGridSize=(13, 13))
+        self.okrange = 20
+        self.okval = 256
 
     def adjustVal(self, th):
         self.okval = th
@@ -32,9 +32,9 @@ class Gate:
         '''
         cv2.namedWindow(str(self.filename)+' ct')
         cv2.createTrackbar('val', str(self.filename)+' ct',
-                           self.okval, 180, self.adjustVal)
+                           self.okval, 256, self.adjustVal)
         cv2.createTrackbar('TileGridSize', str(self.filename)+' ct',
-                           self.okrange, 180, self.adjustRange)
+                           self.okrange, 256, self.adjustRange)
         read = True
         while self.device.isOpened():
             if read:
@@ -75,25 +75,111 @@ class Gate:
 
     def _process(self, img):
         # img = cv2.resize(img, None, fx=0.5,fy=0.5)
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        interest = cv2.extractChannel(hsv, 1)
+        # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        interest0 = cv2.extractChannel(img, 0)*0.05
+        interest1 = cv2.extractChannel(img, 1)*0.6
+        interest2 = cv2.extractChannel(img, 2)*0.35
+        interest = np.array(interest0+interest1+interest2, np.uint8)
+        interest = self.clahe.apply(interest)
+        cv2.imshow('interest', interest)
         mask = cv2.inRange(interest, self.okval-self.okrange,
                            self.okval+self.okrange)
-        kernel = np.ones((10, 3), np.uint8)
+        kernel = np.ones((7, 7), np.uint8)
         noise_removed = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         noise_removed = cv2.medianBlur(noise_removed, 9)
-        _, cts, hi = cv2.findContours(noise_removed, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        
+        _, cts, hi = cv2.findContours(
+            noise_removed, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
         def getHigh(ct):
-            x,y,w,h = cv2.boundingRect(ct)
+            x, y, w, h = cv2.boundingRect(ct)
             return h
 
-        blank = np.zeros_like(interest, np.uint8)
+        def getPos(rect):
+            return rect[0]
 
-        _found=0
-        # _found = ((2*x+w)/img.shape[1]-1, (2*y+h)/img.shape[0]-1,
-        #           2*x/img.shape[1]-1, 2*(x+w)/img.shape[1]-1,
-        #           c_area/w/h, (2*w)/img.shape[1])
+        cts = sorted(cts, key=getHigh, reverse=True)
+
+        three_legs = []
+
+        for ct in cts:
+            x, y, w, h = cv2.boundingRect(ct)
+            if len(three_legs) >= 3:
+                break
+            if w < h/5 and w > h/10:
+                cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 3)
+                three_legs.append((x, y, w, h))
+
+        three_legs = sorted(three_legs, key=getPos)
+
+        if len(three_legs) == 2:
+            three_legs.append(None)
+            if three_legs[0][3]/three_legs[1][3] >= 0.3 and three_legs[0][3]/three_legs[1][3] <= 0.7:
+                three_legs[2] = three_legs[1]
+                three_legs[1] = three_legs[0]
+                three_legs[0] = None
+            elif three_legs[0][3]/three_legs[1][3] >= 0.75 and three_legs[0][3]/three_legs[1][3] <= 1.25:
+                three_legs[2] = three_legs[1]
+                three_legs[1] = None
+
+        cx = 0
+        cy = 0
+        x_left = -1
+        x_right = -1
+        _found = None
+        if len(three_legs) > 1:
+            if len(three_legs) == 1:
+                cx = three_legs[0][0]+three_legs[0][2]/2
+                cy = three_legs[0][1]+three_legs[0][3]/2
+            if len(three_legs) == 2:
+                cx = three_legs[0][0]+three_legs[0][2]/2+three_legs[0][3]
+                cy = three_legs[0][1]+three_legs[0][3]/2
+            if len(three_legs) == 3:
+                if three_legs[0] is not None and three_legs[2] is not None:
+                    cx += three_legs[0][0]+three_legs[0][2]/2
+                    cy += three_legs[0][1]+three_legs[0][3]/2
+                    cx += three_legs[2][0]+three_legs[2][2]/2
+                    cy += three_legs[2][1]+three_legs[2][3]/2
+                    cx /= 2
+                    cy /= 2
+                else:
+                    if three_legs[0] is None:
+                        cx = three_legs[2][0] + \
+                            three_legs[2][2]/2-three_legs[2][3]
+                        cy = three_legs[2][1]+three_legs[2][3]/2
+                    if three_legs[2] is None:
+                        cx = three_legs[0][0] + \
+                            three_legs[0][2]/2+three_legs[0][3]
+                        cy = three_legs[0][1]+three_legs[0][3]/2
+            cv2.circle(img, (int(cx), int(cy)), 10, (255, 255, 0), 3)
+            if three_legs[0] is not None:
+                x_left = three_legs[0][0]
+            if three_legs[2] is not None:
+                x_right = three_legs[2][0]+three_legs[2][2]
+            if x_left == -1:
+                three_legs[2][0]+three_legs[2][2]/2-three_legs[2][3]
+            if x_right == -1:
+                three_legs[0][0]+three_legs[0][2]/2+three_legs[0][3]
+
+            if len(three_legs) == 3 and None not in three_legs:
+                x, y, w, h = three_legs[1]
+                fourty_range = h*2.5
+                min_left = three_legs[0][0]+three_legs[0][2]
+                min_right = three_legs[2][0]
+                if x - fourty_range < min_left:  # fourty is left
+                    if x + w + fourty_range < min_right:
+                        return (img, mask, noise_removed, None)
+                elif x + w + fourty_range > min_right:  # fourty is right
+                    if x - fourty_range > min_left:
+                        return (img, mask, noise_removed, None)
+
+            if len(three_legs) == 3 and three_legs[1] is None:
+                x1, y1, w1, h1 = three_legs[0]
+                x2, y2, w2, h2 = three_legs[2]
+                if x2-x1 > (h1+h2)*1.1 or x2-x1 < (h1+h2)*0.9:
+                    return (img, mask, noise_removed, None)
+            _found = (cx/img.shape[1]*2-1, cy/img.shape[0]*2-1,
+                      x_left/img.shape[1]*2-1, x_right/img.shape[1]*2-1,
+                      1, (x_right-x_left)/img.shape[1]*2-1)
         return (img, mask, noise_removed, _found)
 
     def calcDiffPercent(self, first, second):
