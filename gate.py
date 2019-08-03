@@ -18,14 +18,14 @@ class Gate:
     # USA Param
     mode = 'gray'
     thresh = [75, 256]
-    tileGridSize = 13
+    tileGridSize = 12
     # TH Param
     # mode = 'hsv_v'
     # thresh = [25, 256]
     # tileGridSize = 33
-    knClose = 25
+    knClose = 20
 
-    clipLimit = 4
+    clipLimit = 55
 
     def __init__(self, fileToOpen=None):
         self.GateML = GateML()
@@ -122,8 +122,8 @@ class Gate:
         if self.mode == 'gray':
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         else:
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            gray = cv2.extractChannel(hsv, 2)
+            # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            gray = cv2.extractChannel(img, 1)
         # gray = cv2.equalizeHist(gray)
         gray = self.clahe.apply(gray)
         blur_k = int(self.img_size[0]/150)
